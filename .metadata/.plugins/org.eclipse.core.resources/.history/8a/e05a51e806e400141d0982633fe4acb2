@@ -1,0 +1,407 @@
+package com.example.practica4mp3android;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+import android.R.drawable;
+import android.R.string;
+import android.support.v7.app.ActionBarActivity;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import java.util.concurrent.TimeUnit;
+
+import android.media.MediaPlayer;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.view.Menu;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.view.KeyEvent;
+import android.view.View.OnTouchListener;
+import android.view.MotionEvent;
+import android.view.View.OnClickListener;
+
+@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+@SuppressLint("NewApi")
+public class ItemActivity extends ActionBarActivity {
+	ImageView idImagen;
+	TextView textoEncima;
+	TextView textoDebajo;
+
+	public TextView songName, startTimeField, endTimeField;
+	private MediaPlayer mediaPlayer;
+	private double startTime = 0;
+	private double finalTime = 0;
+	private Handler myHandler = new Handler();;
+	private int forwardTime = 5000;
+	private int backwardTime = 5000;
+	private SeekBar seekbar;
+	private ImageButton buttonPlayStop;
+	public static int oneTimeOnly = 0;
+	boolean repro = true;
+	int poss, contador;
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_item);
+
+		textoEncima = (TextView) findViewById(R.id.textView_superior);
+		textoDebajo = (TextView) findViewById(R.id.textView_inferior);
+		idImagen = (ImageView) findViewById(R.id.imageView_imagen);
+
+		Bundle bundle = getIntent().getExtras();
+		textoEncima.setText(bundle.getString("encima"));
+		textoDebajo.setText(bundle.getString("debajo"));
+		idImagen.setImageResource(getIntent().getExtras().getInt("imagen"));
+
+		startTimeField = (TextView) findViewById(R.id.textView1);
+		endTimeField = (TextView) findViewById(R.id.textView2);
+		seekbar = (SeekBar) findViewById(R.id.seekBar1);
+
+		switch(bundle.getInt("posicion")) {
+		case 0:contador=0;
+			mediaPlayer = MediaPlayer.create(this, R.raw.josh_groban_104);
+			break;
+		case 1:contador=1;
+			mediaPlayer = MediaPlayer.create(this, R.raw.adele_105);
+			break;
+		case 2:contador=2;
+			mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_106);
+			break;
+		case 3:contador=3;
+			mediaPlayer = MediaPlayer.create(this, R.raw.bustamante_107);
+			break;
+		case 4:contador=4;
+			mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_108);
+			break;
+		case 5:contador=5;
+			mediaPlayer = MediaPlayer.create(this, R.raw.josh_groban_109);
+			break;
+		case 6:contador=6;
+			mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_110);
+			break;
+		}
+		try {
+			mediaPlayer.prepare();
+		} catch (IllegalStateException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		seekbar.setClickable(false);
+		seekbar.setOnTouchListener(new OnTouchListener() {
+			@SuppressLint("ClickableViewAccessibility")
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				seekChange(v);
+				return false;
+			}
+		});
+
+		buttonPlayStop = (ImageButton) findViewById(R.id.ImageButton01);
+		buttonPlayStop.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (repro == true) {
+					buttonPlayStop.setImageResource(drawable.ic_media_pause);
+					repro = false;
+					play(v);
+				} else {
+					buttonPlayStop.setImageResource(drawable.ic_media_play);
+					repro = true;
+					pause(v);
+				}
+			}
+		});
+
+	}
+
+	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
+	@SuppressLint("NewApi")
+	public void play(View view) {
+		Toast.makeText(getApplicationContext(), "Reproducir Pista",
+				Toast.LENGTH_SHORT).show();
+		mediaPlayer.start();
+		finalTime = mediaPlayer.getDuration();
+		startTime = mediaPlayer.getCurrentPosition();
+		if (oneTimeOnly == 0) {
+			seekbar.setMax((int) finalTime);
+			oneTimeOnly = 1;
+		}
+
+		endTimeField.setText(String.format(
+				"%d:%d",
+				TimeUnit.MILLISECONDS.toMinutes((long) finalTime),
+				TimeUnit.MILLISECONDS.toSeconds((long) finalTime)
+						- TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS
+								.toMinutes((long) finalTime))));
+		startTimeField.setText(String.format(
+				"%d:%d",
+				TimeUnit.MILLISECONDS.toMinutes((long) startTime),
+				TimeUnit.MILLISECONDS.toSeconds((long) startTime)
+						- TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS
+								.toMinutes((long) startTime))));
+		seekbar.setProgress((int) startTime);
+		myHandler.postDelayed(UpdateSongTime, 100);
+		
+		if (repro == true) {
+			buttonPlayStop.setImageResource(drawable.ic_media_pause);
+			repro = false;
+		} else {
+			buttonPlayStop.setImageResource(drawable.ic_media_play);
+			repro = true;
+		}
+	}
+
+	private Runnable UpdateSongTime = new Runnable() {
+		public void run() {
+			startTime = mediaPlayer.getCurrentPosition();
+			startTimeField.setText(String.format(
+					"%d:%d",
+					TimeUnit.MILLISECONDS.toMinutes((long) startTime),
+					TimeUnit.MILLISECONDS.toSeconds((long) startTime)
+							- TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS
+									.toMinutes((long) startTime))));
+			seekbar.setProgress((int) startTime);
+			myHandler.postDelayed(this, 100);
+		}
+	};
+
+	public void pause(View view) {
+		Toast.makeText(getApplicationContext(), "Pista Pausada",
+				Toast.LENGTH_SHORT).show();
+		mediaPlayer.pause();
+		
+		if (repro == true) {
+			buttonPlayStop.setImageResource(drawable.ic_media_pause);
+			repro = false;
+		} else {
+			buttonPlayStop.setImageResource(drawable.ic_media_play);
+			repro = true;
+		}
+	}
+
+	public void forward(View view) {
+		int temp = (int) startTime;
+		if ((temp + forwardTime) <= finalTime) {
+			startTime = startTime + forwardTime;
+			mediaPlayer.seekTo((int) startTime);
+		} else {
+			Toast.makeText(getApplicationContext(),
+					"Cannot jump forward 5 seconds", Toast.LENGTH_SHORT).show();
+		}
+	}
+
+	public void rewind(View view) {
+		int temp = (int) startTime;
+		if ((temp - backwardTime) > 0) {
+			startTime = startTime - backwardTime;
+			mediaPlayer.seekTo((int) startTime);
+		} else {
+			Toast.makeText(getApplicationContext(),
+					"Cannot jump backward 5 seconds", Toast.LENGTH_SHORT)
+					.show();
+		}
+
+	}
+
+	public void siguiente(View view) {
+		if(contador == 6){
+			Toast.makeText(getApplicationContext(), "No hay mas",
+					Toast.LENGTH_SHORT).show();
+		}else{
+			pause(view);
+			contador++;
+			nexPreviuSong(view);
+			play(view);
+		}
+	}
+	public void anterior(View view) {
+		if(contador == 0){
+			Toast.makeText(getApplicationContext(), "No hay mas",
+					Toast.LENGTH_SHORT).show();
+		}else{
+			pause(view);
+			contador--;
+			nexPreviuSong(view);
+			play(view);
+		}
+	}
+	
+	private void seekChange(View v) {
+		if (mediaPlayer.isPlaying()) {
+			SeekBar sb = (SeekBar) v;
+			mediaPlayer.seekTo(sb.getProgress());
+		}
+	}
+	
+	private void nexPreviuSong(View v){
+		switch(contador) {
+		case 0:contador=0;
+			//mediaPlayer.release();
+			textoEncima.setText("Josh Groban");textoDebajo.setText("You Raise Me Up");
+			idImagen.setImageResource(R.drawable.im_104);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.josh_groban_104);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			break;
+		case 1:contador=1;
+			//mediaPlayer.release();
+			textoEncima.setText("Adele");textoDebajo.setText("Rolling In The Deep");
+			idImagen.setImageResource(R.drawable.im_105);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.adele_105);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//mediaPlayer = MediaPlayer.create(this, R.raw.adele_105);
+			break;
+		case 2:contador=2;
+			//mediaPlayer.release();
+			textoEncima.setText("Eric Saade");textoDebajo.setText("Forgive Me");
+			idImagen.setImageResource(R.drawable.im_106);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_106);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_106);
+			break;
+		case 3:contador=3;
+			//mediaPlayer.release();
+			textoEncima.setText("David Bustamante");textoDebajo.setText("Ojo Por Ojo");
+			idImagen.setImageResource(R.drawable.im_107);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.bustamante_107);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//mediaPlayer = MediaPlayer.create(this, R.raw.bustamante_107);
+			break;
+		case 4:contador=4;
+			//mediaPlayer.release();
+			textoEncima.setText("Eric Saade");textoDebajo.setText("Sky Falls Down (Feat. J-Son)");
+			idImagen.setImageResource(R.drawable.im_108);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_108);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_108);
+			break;
+		case 5:contador=5;
+			//mediaPlayer.release();
+			textoEncima.setText("Josh Groban");textoDebajo.setText("Remember When It Rained");
+			idImagen.setImageResource(R.drawable.im_104);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.josh_groban_109);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//mediaPlayer = MediaPlayer.create(this, R.raw.josh_groban_109);
+			break;
+		case 6:contador=6;
+			//mediaPlayer.release();
+			textoEncima.setText("Eric Saade");textoDebajo.setText("Popular (Remix)");
+			idImagen.setImageResource(R.drawable.im_110);
+			try {
+				mediaPlayer.reset();
+				mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_110);
+				mediaPlayer.prepare();
+			} catch (IllegalStateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//mediaPlayer = MediaPlayer.create(this, R.raw.eric_saade_110);
+			break;
+		}
+	}
+
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if ((keyCode == KeyEvent.KEYCODE_BACK)) {
+			mediaPlayer.pause();
+			mediaPlayer.reset();
+			finish();
+			//return true;
+		}
+		return super.onKeyDown(keyCode, event);
+	}
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle action bar item clicks here. The action bar will
+		// automatically handle clicks on the Home/Up button, so long
+		// as you specify a parent activity in AndroidManifest.xml.
+		int id = item.getItemId();
+		if (id == R.id.action_settings) {
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+}
